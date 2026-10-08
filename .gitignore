@@ -1,0 +1,33 @@
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+
+# Visual Studio
+.vs/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+
+# Other generated files
+*.tmp
+*.log
+*.pidb
+*.pdb
+*.mdb
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Unity Version Control / SVN
+.plastic/
+.svn/
