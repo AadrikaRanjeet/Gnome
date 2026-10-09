@@ -1,19 +1,21 @@
 using System;
 using UnityEngine;
 
-// Attach to the Gnome prefab (root object that has the SpriteRenderer / Animator).
-// Walks from where it spawned, through every waypoint of its route, then reports "Arrived".
+// UPDATED: now also dies if it is inside an active (Out) danger zone.
 public class GnomeWalker : MonoBehaviour
 {
     [SerializeField] SpriteRenderer spriteRenderer;  // optional, auto-found in children
-    [SerializeField] bool artFacesRight = true;      // untick if your gnome art faces LEFT by default
+    [SerializeField] bool artFacesRight = true;
+    [SerializeField] GameObject deathFx;             // optional: any poof/puff prefab
 
-    public event Action<GnomeWalker> Arrived;
+    public event Action<GnomeWalker> Arrived;        // reached the cave = saved
+    public event Action<GnomeWalker> Died;           // hit the fire
 
     PathRoute route;
     int next;
     float speed;
-    Vector2 offset;   // tiny per-gnome offset so the stream doesn't stack into one gnome
+    Vector2 offset;
+    bool done;
 
     public void Init(PathRoute r, float worldSpeed, float jitter)
     {
@@ -29,11 +31,11 @@ public class GnomeWalker : MonoBehaviour
 
     void Update()
     {
-        if (route == null) return;
+        if (route == null || done) return;
 
         Vector3 pos = transform.position;
         Vector3 wp = route.GetPoint(next);
-        Vector3 target = new Vector3(wp.x + offset.x, wp.y + offset.y, pos.z); // keep our own z
+        Vector3 target = new Vector3(wp.x + offset.x, wp.y + offset.y, pos.z);
         Vector3 delta = target - pos;
         float step = speed * Time.deltaTime;
 
@@ -41,17 +43,29 @@ public class GnomeWalker : MonoBehaviour
         {
             transform.position = target;
             next++;
-            if (next >= route.Count)
-            {
-                Arrived?.Invoke(this);
-                Destroy(gameObject);
-            }
-            return;
+            if (next >= route.Count) { Finish(true); return; }
+        }
+        else
+        {
+            transform.position = pos + delta.normalized * step;
+            if (spriteRenderer != null && Mathf.Abs(delta.x) > 0.01f)
+                spriteRenderer.flipX = artFacesRight ? delta.x < 0f : delta.x > 0f;
         }
 
-        transform.position = pos + delta.normalized * step;
+        // Danger check: inside an active zone = dead
+        if (route.Monster != null && route.Monster.TryKill(transform.position))
+            Finish(false);
+    }
 
-        if (spriteRenderer != null && Mathf.Abs(delta.x) > 0.01f)
-            spriteRenderer.flipX = artFacesRight ? delta.x < 0f : delta.x > 0f;
+    void Finish(bool saved)
+    {
+        done = true;
+        if (saved) Arrived?.Invoke(this);
+        else
+        {
+            if (deathFx != null) Instantiate(deathFx, transform.position, Quaternion.identity);
+            Died?.Invoke(this);
+        }
+        Destroy(gameObject);
     }
 }

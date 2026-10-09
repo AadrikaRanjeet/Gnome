@@ -1,18 +1,17 @@
 using UnityEngine;
 
-// One of these per path (Upper / Middle / Lower).
-// Attach to Route_Upper, Route_Middle, Route_Lower.
-// The waypoints are the children of "waypointRoot", in hierarchy order (top = first).
+// UPDATED: same as before, plus a "Monster" slot for the cave at the end of this path.
 public class PathRoute : MonoBehaviour
 {
     [SerializeField] Transform waypointRoot;       // the "Waypoints" child object
+    [SerializeField] Monster monster;              // NEW: the Monster child of this route
     [SerializeField] Color gizmoColor = Color.yellow;
 
+    public Monster Monster => monster;
     public int Count => waypointRoot != null ? waypointRoot.childCount : 0;
 
     public Vector3 GetPoint(int i) { return waypointRoot.GetChild(i).position; }
 
-    // Distance from a world point to this path's polyline (used to pick the nearest path on click).
     public float DistanceTo(Vector2 p)
     {
         float best = float.MaxValue;
@@ -27,7 +26,6 @@ public class PathRoute : MonoBehaviour
         return best;
     }
 
-    // Draws the path in the Scene view so you can see/adjust it over your background art.
     void OnDrawGizmos()
     {
         if (waypointRoot == null) return;
