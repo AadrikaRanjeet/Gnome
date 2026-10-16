@@ -5,12 +5,12 @@ public enum MonsterState { Hidden, Warning, Out }
 // UPDATED. Stays on the "Monster" empty object of each route.
 //
 // Cycle:
-//   Hidden  : everything off
-//   Warning : flame blinks (monster still in the cave)
-//   Out     : flame solid + DEADLY. Monster walks forward, waits (idle), then walks back.
-//             If a gnome gets caught, the monster stops and ATTACKS, then carries on.
-//             No gnome = no attack: it just walks out, idles and goes back.
-//   (the flame goes off when the monster starts walking back = safe again)
+//   Hidden  : everything off, safe
+//   Warning : FLAME appears (this is only the warning, safe)
+//             -> flame goes off -> short gap -> monster appears
+//   Out     : MONSTER walks forward, idles, walks back. DEADLY while it is out.
+//             If a gnome is caught, it stops and ATTACKS, then carries on.
+//   (safe again as soon as it starts walking back)
 public class Monster : MonoBehaviour
 {
     enum OutPhase { WalkOut, Linger, WalkBack }
@@ -27,19 +27,21 @@ public class Monster : MonoBehaviour
     [SerializeField] string idleParam = "Idle";       // bool
     [SerializeField] string attackParam = "Attack";   // trigger
 
-    [Header("Danger zone")]
+    [Header("Danger zone (active while the MONSTER is out)")]
     [SerializeField] Transform dangerCenter;      // empty child: red circle follows it (empty = this object)
     [SerializeField] float dangerRadius = 1.2f;
 
     [Header("Timing (seconds). X = minimum, Y = maximum: a random value in between is picked.")]
     [SerializeField] float startDelay = 0f;
     [SerializeField] Vector2 hiddenTime = new Vector2(2.5f, 4.5f);
-    [SerializeField] float warningTime = 1.0f;
+    [SerializeField] float warningTime = 1.2f;        // how long the flame is shown
+    [SerializeField] bool blinkFlame = false;         // tick for a blinking flame, untick for steady flame
     [SerializeField] float warningBlink = 0.15f;
+    [SerializeField] float gapAfterFlame = 0.3f;      // pause between flame gone and monster appearing
     [SerializeField] float walkOutTime = 0.6f;
     [SerializeField] Vector2 lingerTime = new Vector2(0.8f, 1.5f);
     [SerializeField] float walkBackTime = 0.7f;
-    [SerializeField] float attackTime = 0.8f;     // how long the monster freezes to attack: match your attack clip
+    [SerializeField] float attackTime = 0.8f;         // how long the monster freezes to attack: match your attack clip
 
     [Header("Debug (read only)")]
     [SerializeField] MonsterState currentState;
@@ -49,7 +51,7 @@ public class Monster : MonoBehaviour
 
     OutPhase phase;
     float timer, phaseDuration, blinkTimer, attackTimer;
-    bool attacking;
+    bool attacking, flameGapStarted;
     Vector3 startPos;
     Vector3 originalScale = Vector3.one;
 
@@ -78,7 +80,7 @@ public class Monster : MonoBehaviour
 
         timer -= Time.deltaTime;
 
-        if (State == MonsterState.Warning && flameRoot != null)
+        if (State == MonsterState.Warning && blinkFlame && !flameGapStarted && flameRoot != null)
         {
             blinkTimer -= Time.deltaTime;
             if (blinkTimer <= 0f)
@@ -94,9 +96,24 @@ public class Monster : MonoBehaviour
 
         switch (State)
         {
-            case MonsterState.Hidden: EnterWarning(); break;
-            case MonsterState.Warning: EnterOut(); break;
-            case MonsterState.Out: NextPhase(); break;
+            case MonsterState.Hidden:
+                EnterWarning();
+                break;
+
+            case MonsterState.Warning:
+                if (!flameGapStarted && gapAfterFlame > 0f)
+                {
+                    // flame is done: switch it off and wait a beat before the monster shows up
+                    flameGapStarted = true;
+                    if (flameRoot != null) flameRoot.SetActive(false);
+                    timer = gapAfterFlame;
+                }
+                else EnterOut();
+                break;
+
+            case MonsterState.Out:
+                NextPhase();
+                break;
         }
     }
 
@@ -119,15 +136,16 @@ public class Monster : MonoBehaviour
     void EnterWarning()
     {
         SetState(MonsterState.Warning, warningTime);
-        blinkTimer = 0f;
-        if (flameRoot != null) flameRoot.SetActive(false);
+        flameGapStarted = false;
+        blinkTimer = warningBlink;
+        if (flameRoot != null) flameRoot.SetActive(true);     // flame appears = warning
     }
 
     void EnterOut()
     {
         SetState(MonsterState.Out, walkOutTime);
         attacking = false;
-        if (flameRoot != null) flameRoot.SetActive(true);
+        if (flameRoot != null) flameRoot.SetActive(false);    // flame is gone, now the monster comes
         if (monsterRoot != null)
         {
             monsterRoot.transform.position = startPos;
@@ -155,14 +173,10 @@ public class Monster : MonoBehaviour
         timer = phaseDuration;
         PlayPhaseAnim();
 
-        if (p == OutPhase.WalkBack)
+        if (p == OutPhase.WalkBack && flipWhenWalkingBack && monsterRoot != null)
         {
-            if (flameRoot != null) flameRoot.SetActive(false);    // danger is over, monster is leaving
-            if (flipWhenWalkingBack && monsterRoot != null)
-            {
-                var s = originalScale;
-                monsterRoot.transform.localScale = new Vector3(-s.x, s.y, s.z);
-            }
+            var s = originalScale;
+            monsterRoot.transform.localScale = new Vector3(-s.x, s.y, s.z);
         }
     }
 
@@ -223,7 +237,7 @@ public class Monster : MonoBehaviour
 
     // ---------- danger ----------
 
-    // Deadly from walk-out until the monster starts walking back, inside the red circle only.
+    // Deadly from the moment the monster appears until it starts walking back, inside the red circle only.
     public bool IsDeadly(Vector2 worldPos)
     {
         if (State != MonsterState.Out || phase == OutPhase.WalkBack) return false;

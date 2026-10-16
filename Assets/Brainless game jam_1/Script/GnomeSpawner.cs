@@ -1,25 +1,30 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// UPDATED: spawns a MIX of different gnome prefabs instead of just one.
-// Uses a "shuffle bag": every gnome prefab is used once (in random order) before any repeats,
-// so with 20 prefabs and 100 gnomes each one shows up about 5 times.
+// FULL REPLACEMENT. Same as before, plus the "Traffic / Halt" settings.
 public class GnomeSpawner : MonoBehaviour
 {
-    [SerializeField] GameObject[] gnomePrefabs;        // drag ALL your gnome prefabs here
-    [SerializeField] Transform gnomeParent;            // the "Gnomes" container object
+    [SerializeField] GameObject[] gnomePrefabs;
+    [SerializeField] Transform gnomeParent;
     [SerializeField] PathRoute[] routes;               // 0 = Upper, 1 = Middle, 2 = Lower
 
     [Header("Stream")]
-    [SerializeField] int totalGnomes = 100;            // set any number: 5, 30, 100...
-    [SerializeField] float spawnInterval = 0.5f;
-    [SerializeField] float gnomeSpeed = 2.5f;
-    [SerializeField, Range(0f, 0.4f)] float speedVariance = 0.1f;
-    [SerializeField] float positionJitter = 0.08f;
+    [SerializeField] int totalGnomes = 100;
+    [SerializeField] float spawnInterval = 0.7f;
+    [SerializeField] float gnomeSpeed = 1.5f;          // gap between gnomes = speed x interval
+    [SerializeField, Range(0f, 0.4f)] float speedVariance = 0f;
+    [SerializeField] float positionJitter = 0.1f;
+
+    [Header("Size")]
+    [SerializeField] float targetHeight = 1.0f;        // 0 = off
 
     [Header("Sorting")]
-    [SerializeField] bool overrideSortingOrder = true; // untick if a gnome has several layered sprite parts
-    [SerializeField] int gnomeSortingOrder = 5;        // above background (0), below foreground (10)
+    [SerializeField] int ySortBase = 5000;             // Canvas_Foreground must be ABOVE ~6000 (use 10000)
+
+    [Header("Traffic / Halt")]
+    [SerializeField] float minGap = 0.5f;              // closest a gnome can get to the one ahead. Keep BELOW speed x interval
+    [SerializeField, Range(0.5f, 1f)] float crouchScaleY = 0.9f;
+    [SerializeField] Color haltTint = new Color(0.72f, 0.86f, 1f, 1f);   // slight blue so halted gnomes are easy to spot
 
     public PathRoute[] Routes => routes;
     public int TotalGnomes => totalGnomes;
@@ -48,7 +53,7 @@ public class GnomeSpawner : MonoBehaviour
         if (bag.Count == 0)
         {
             for (int i = 0; i < gnomePrefabs.Length; i++) bag.Add(i);
-            for (int i = bag.Count - 1; i > 0; i--)            // shuffle
+            for (int i = bag.Count - 1; i > 0; i--)
             {
                 int j = Random.Range(0, i + 1);
                 (bag[i], bag[j]) = (bag[j], bag[i]);
@@ -57,6 +62,16 @@ public class GnomeSpawner : MonoBehaviour
         int idx = bag[bag.Count - 1];
         bag.RemoveAt(bag.Count - 1);
         return idx;
+    }
+
+    void NormalizeSize(GameObject go)
+    {
+        if (targetHeight <= 0f) return;
+        var rs = go.GetComponentsInChildren<SpriteRenderer>();
+        if (rs.Length == 0) return;
+        Bounds b = rs[0].bounds;
+        for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
+        if (b.size.y > 0.001f) go.transform.localScale *= targetHeight / b.size.y;
     }
 
     void Spawn()
@@ -68,16 +83,13 @@ public class GnomeSpawner : MonoBehaviour
             return;
         }
 
-        var prefab = gnomePrefabs[NextPrefabIndex()];
-        var go = Instantiate(prefab, transform.position, Quaternion.identity, gnomeParent);
+        var go = Instantiate(gnomePrefabs[NextPrefabIndex()], transform.position, Quaternion.identity, gnomeParent);
+        NormalizeSize(go);
 
-        if (overrideSortingOrder)
-            foreach (var sr in go.GetComponentsInChildren<SpriteRenderer>())
-                sr.sortingOrder = gnomeSortingOrder;
-
-        // Prefabs don't need GnomeWalker added by hand: we add it here if it's missing.
         var g = go.GetComponent<GnomeWalker>();
         if (g == null) g = go.AddComponent<GnomeWalker>();
+        g.EnableYSort(ySortBase, 100f);
+        g.SetTraffic(minGap, crouchScaleY, haltTint);
 
         float spd = gnomeSpeed * Random.Range(1f - speedVariance, 1f + speedVariance);
         g.Init(routes[SelectedRoute], spd, positionJitter);

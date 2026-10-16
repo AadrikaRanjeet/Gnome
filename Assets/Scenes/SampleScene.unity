@@ -170,7 +170,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -256,7 +256,9 @@ MonoBehaviour:
   startDelay: 0
   hiddenTime: {x: 4, y: 4.5}
   warningTime: 1
+  blinkFlame: 1
   warningBlink: 0.15
+  gapAfterFlame: 0.3
   walkOutTime: 0.6
   lingerTime: {x: 0.4, y: 1}
   walkBackTime: 0.7
@@ -530,13 +532,16 @@ MonoBehaviour:
   - {fileID: 1722443508}
   - {fileID: 1075166925}
   - {fileID: 1637803735}
-  totalGnomes: 50
+  totalGnomes: 100
   spawnInterval: 0.8
   gnomeSpeed: 1.5
   speedVariance: 0.1
   positionJitter: 0.8
-  overrideSortingOrder: 1
-  gnomeSortingOrder: 5
+  targetHeight: 1
+  ySortBase: 5000
+  minGap: 0.5
+  crouchScaleY: 1
+  haltTint: {r: 0.72, g: 0.86, b: 1, a: 1}
 --- !u!1 &469999288
 GameObject:
   m_ObjectHideFlags: 0
@@ -1473,7 +1478,9 @@ MonoBehaviour:
   startDelay: 0
   hiddenTime: {x: 2.5, y: 4.5}
   warningTime: 1
+  blinkFlame: 1
   warningBlink: 0.15
+  gapAfterFlame: 0.3
   walkOutTime: 0.6
   lingerTime: {x: 0.4, y: 1}
   walkBackTime: 0.7
@@ -2007,7 +2014,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -2061,6 +2068,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PathSelectInput
   spawner: {fileID: 269393704}
+  gnomeClickPadding: 0.15
 --- !u!4 &1303882577
 Transform:
   m_ObjectHideFlags: 0
@@ -3127,7 +3135,9 @@ MonoBehaviour:
   startDelay: 0
   hiddenTime: {x: 2.5, y: 4.5}
   warningTime: 1
+  blinkFlame: 1
   warningBlink: 0.15
+  gapAfterFlame: 0.3
   walkOutTime: 0.6
   lingerTime: {x: 0.4, y: 1}
   walkBackTime: 0.7
