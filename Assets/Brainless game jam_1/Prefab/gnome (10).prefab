@@ -80,7 +80,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 5
+  m_SortingOrder: 3
   m_MaskInteraction: 0
   m_Sprite: {fileID: -2580912184464779527, guid: 2d94952c997e2fe49b3ecaf64bf01a52, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -106,3 +106,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GnomeWalker
   spriteRenderer: {fileID: 469957943884023748}
   artFacesRight: 1
+  deathFx: {fileID: 0}
